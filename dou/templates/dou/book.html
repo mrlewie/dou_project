@@ -1,0 +1,68 @@
+{% extends 'dou/base.html' %}
+
+{% load static %}
+{% block title %}<title>Books</title>{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href={% static 'css/dou-book.css' %}>{% endblock %}
+
+{% block content %}
+    <div class="container-fluid content-header"
+         style="background-image: url({{ book.cover_thumb_lg.url }}); height: 18rem;">
+        <div class="row row-header align-items-center" style="height: 18rem;">
+            <div class="col-2 text-center" style="background-color: transparent;">
+                <img class="img" style="height: 16rem;" src={{ book.cover_thumb_lg.url }}>
+            </div>
+            <div class="col-6 text-left" style="height: 16rem; background-color: rgba(255, 255, 255, 0.25);">
+                <h2 class="text-uppercase text-truncate"
+                    style="color: rgb({{ book.cover_palette.0.0 }}, {{ book.cover_palette.0.1 }}, {{ book.cover_palette.0.2 }});"> {{ book.name_en }}</h2>
+                <h3 class="font-weight-light text-uppercase text-truncate"
+                    style="color: rgb({{ sec_r }}, {{ sec_g }}, {{ sec_b }});"> {{ book.name_jp }}</h3>
+            </div>
+            <div class="col-1"></div>
+            <div class="col-2 text-left" style="height: 16rem;"></div>
+            <div class="col-1"></div>
+        </div>
+    </div>
+
+    <div class="container-fluid mt-3">
+        <div id="pages-container" class="d-flex flex-wrap">
+
+            <div id="spinner" class="d-flex justify-content-center">
+                <div class="spinner-border" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+{% endblock %}
+
+
+
+{% block jquery %}
+    <script>
+        $(window).on('load', function () {
+
+            $("#spinner-border").show();
+
+            $.ajax({
+                url: '',
+                type: 'POST',
+                data: {
+                    'book_id': '{{ book.id }}',
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function (data) {
+                    let cards = '';
+                    data.pages.forEach(page => {
+                        cards += '<div class="card m-2 bg-light" style="width: 12rem;"><div class="card-hover-area"><div class="card-img-frame"><a href="#"><img class="card-img-top" src="' + '/media/' + page.page_thumb_lg + '"></a></div><div class="card-footer p-0"><div class="row"><div class="col text-left "><p class="card-title ml-2 font-weight-normal text-uppercase text-truncate">Page ' + page.page_number + '</p></div><div class="col text-right"><button type="button" class="btn btn-card btn-sm p-1"><span class="fas fa-ellipsis-v fa-s"></span></button></div></div></div></div></div>'
+                    });
+
+                    $('#pages-container').append(cards);
+
+                    $("#spinner-border").hide();
+                }
+            });
+        });
+    </script>
+{% endblock %}

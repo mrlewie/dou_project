@@ -1,0 +1,67 @@
+{% extends 'dou/base.html' %}
+
+{% load static %}
+{% block title %}<title>Books</title>{% endblock %}
+{% block stylesheet %}<link rel="stylesheet" href={% static 'css/dou-books.css' %}>{% endblock %}
+
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="d-flex flex-wrap">
+
+            {% for book in book_list %}
+                <div class="card m-2 bg-light" style="width: 12rem;">
+                    <div class="card-hover-area">
+                        <div class="card-header p-0 text-right">
+                            <div class="row">
+                                <div class="col-4"></div>
+                                <div class="col">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-card btn-sm p-1"><span
+                                                class="fas fa-pencil-alt fa-s"></span></button>
+                                        <button type="button" class="btn btn-card btn-sm p-1"><span
+                                                class="fas fa-eye fa-s"></span></button>
+                                        <button type="button" class="btn btn-card btn-sm p-1"><span
+                                                class="fas fa-ellipsis-v fa-s"></span></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-img-frame">
+                            <a href="{% url 'book' book.id %}">
+                                <img class="card-img rounded-0" src={{ book.cover_thumb_lg.url }}>
+                            </a>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="row">
+                                <div class="col text-left">
+                                    <p class="card-text ml-2 mr-2 mt-1 mb-0 font-weight-light text-uppercase text-truncate">{{ book.web_id }}</p>
+                                </div>
+                                <div class="col text-right">
+                                    <p class="card-text ml-2 mr-2 mt-1 mb-0 font-weight-light text-uppercase text-truncate">{{ book.released }}</p>
+                                </div>
+                            </div>
+                            <p class="card-title ml-2 mr-2 mt-0 mb-0 font-weight-normal text-uppercase text-truncate">{{ book.name_en }}</p>
+                            <p class="card-subtitle ml-2 mr-2 mt-0 mb-0 font-weight-light text-uppercase text-truncate">{{ book.name_jp }}</p>
+                            <p class="card-text ml-2 mt-0 mr-2 mb-2 font-weight-light text-truncate">{{ book.concat_author_names_en }}</p>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                No Books.
+            {% endfor %}
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block jquery %}
+    <script>
+        $(".book-refresh-btn").click(function () {
+            var b_id;
+            b_id = $(this).attr("data-b_id");
+            $.get('/dou/refresh_book/', {book_id: b_id}, function (data) {
+            });
+        });
+    </script>
+{% endblock %}

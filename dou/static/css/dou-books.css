@@ -1,0 +1,59 @@
+.card {
+    box-shadow: 2px 3px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+.card-hover-area:hover .card-title {
+    transition: all 0.1s ease;
+    color: rgba(0, 0, 0, 0.75);
+}
+
+.card-hover-area:hover .card-subtitle {
+    transition: all 0.1s ease;
+    color: rgba(0, 0, 0, 0.75);
+}
+
+.card-hover-area:hover .card-text {
+    transition: all 0.1s ease;
+    color: rgba(0, 0, 0, 0.75);
+}
+
+.card-hover-area:hover .btn-card {
+    transition: all 0.1s ease;
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.card-hover-area:hover .card-img {
+    transition: all 0.1s ease;
+    transform: scale(1.0075);
+}
+
+.card-title {
+    font-size: 15px;
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.card-subtitle, .card-text {
+    font-size: 10px;
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.btn-card {
+    width: 2rem;
+    color: rgba(0, 0, 0, 0.25);
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.btn-card:focus, .btn-card:active {
+    outline: none;
+    box-shadow: none;
+}
+
+.btn-card:hover {
+    transition: all 0.1s ease;
+    color: rgba(0, 0, 0, 0.75) !important;
+}
+
+.card-img-frame {
+    overflow: hidden;
+}

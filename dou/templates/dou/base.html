@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    {% block title %}<title>Base Template</title>{% endblock %}
+
+    {% load static %}
+    <link rel="stylesheet" href={% static 'fonts/css/all.min.css' %}>
+    <link rel="stylesheet" href={% static 'css/bootstrap.min.css' %}>
+    {% block stylesheet %}{% endblock %}
+    <script src={% static "js/jquery-3.4.1.js" %}></script>
+    <script src={% static "js/popper.min.js" %}></script>
+    <script src={% static "js/bootstrap.min.js" %}></script>
+
+</head>
+<body>
+{% block nav %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <a class="navbar-brand font-weight-bold" href="#">dou</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="navbar-nav">
+                <a class="nav-item nav-link" href="#">Home</a>
+                <a class="nav-item nav-link" href="#">Authors</a>
+                <a class="nav-item nav-link active" href="#">Books</a>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}{% endblock %}
+{% block jquery %}{% endblock %}
+
+</body>
+</html>
