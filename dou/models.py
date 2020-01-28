@@ -714,3 +714,4 @@ def clean_cover_images(folder_path):
 # book.refresh_page_images()
 # clean_filenames(FOLDER_PATH)
 # clean_cover_images(SETTINGS_MEDIA_PATH)
+# test
