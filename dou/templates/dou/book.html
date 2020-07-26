@@ -1,66 +1,233 @@
 {% extends 'dou/base.html' %}
 
 {% load static %}
-{% block title %}<title>Books</title>{% endblock %}
+{% block title %}<title>Book</title>{% endblock %}
 {% block stylesheet %}
-    <link rel="stylesheet" href={% static 'css/dou-book.css' %}>{% endblock %}
-
-{% block content %}
-    <div class="container-fluid content-header"
-         style="background-image: url({{ book.cover_thumb_lg.url }}); height: 18rem;">
-        <div class="row row-header align-items-center" style="height: 18rem;">
-            <div class="col-2 text-center" style="background-color: transparent;">
-                <img class="img" style="height: 16rem;" src={{ book.cover_thumb_lg.url }}>
-            </div>
-            <div class="col-6 text-left" style="height: 16rem; background-color: rgba(255, 255, 255, 0.25);">
-                <h2 class="text-uppercase text-truncate"
-                    style="color: rgb({{ book.cover_palette.0.0 }}, {{ book.cover_palette.0.1 }}, {{ book.cover_palette.0.2 }});"> {{ book.name_en }}</h2>
-                <h3 class="font-weight-light text-uppercase text-truncate"
-                    style="color: rgb({{ sec_r }}, {{ sec_g }}, {{ sec_b }});"> {{ book.name_jp }}</h3>
-            </div>
-            <div class="col-1"></div>
-            <div class="col-2 text-left" style="height: 16rem;"></div>
-            <div class="col-1"></div>
-        </div>
-    </div>
-
-    <div class="container-fluid mt-3">
-        <div id="pages-container" class="d-flex flex-wrap">
-
-            <div id="spinner" class="d-flex justify-content-center">
-                <div class="spinner-border" role="status">
-                    <span class="sr-only">Loading...</span>
-                </div>
-            </div>
-
-        </div>
-    </div>
+    <link rel="stylesheet" href={% static 'css/dou-book.css' %}>
+    <style>
+        body {
+            background-image: url({{ book.cover_thumb_lg.url }});
+        }
+    </style>
 {% endblock %}
 
+{% block content %}
+    <div class="content container-fluid">
+        <div class="row">
+            <div class="col">
+                <div class="jumbotron m-2">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-6" style="background-color: blue">
+                                <h1 class="display-4 font-weight-light text-uppercase text-truncate">{{ book.name_en|default_if_none:"N/A" }}</h1>
+                                <p class="lead font-weight-light text-uppercase text-truncate">{{ book.name_jp|default_if_none:"N/A" }}</p>
+                                <hr class="my-2">
+                                <div class="row">
+                                    <div class="col" style="background-color: green">
+                                        <div class="row">
+                                            <div class="col-4">
+                                                <p class="font-weight-light text-uppercase text-truncate">
+                                                    Released:</p>
+                                            </div>
+                                            <div class="col-8">
+                                                <p class="font-weight-light text-uppercase text-truncate">{{ book.released|default_if_none:"N/A" }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-4">
+                                                <p class="font-weight-light text-uppercase text-truncate">
+                                                    Language:</p>
+                                            </div>
+                                            <div class="col-8">
+                                                <p class="font-weight-light text-uppercase text-truncate">{{ book.get_language_from_code|default_if_none:"N/A" }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-4">
+                                                <p class="font-weight-light text-uppercase text-truncate">Adult
+                                                    Content:</p>
+                                            </div>
+                                            <div class="col-8">
+                                                {% if book.is_adult == "0" %}
+                                                    <span class="fas fa-ban"></span>
+                                                {% elif book.is_adult == "1" %}
+                                                    <span class="far fa-check-circle"></span>
+                                                {% else %}
+                                                    <p class="font-weight-light text-uppercase text-truncate">
+                                                        N/A</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-4">
+                                               <div>{{ book.filename }}</div>
+                                                <p class="font-weight-light text-uppercase text-truncate">Page
+                                                    Count:</p>
+                                            </div>
+                                            <div class="col-8">
+                                                <p class="font-weight-light text-uppercase text-truncate">{{ book.num_pages|default_if_none:"N/A" }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col" style="background-color: yellow">
+                                        <div class="row">
+                                            <div class="col-4">
+                                                <p class="font-weight-light text-uppercase text-truncate">
+                                                    Anthology:</p>
+                                            </div>
+                                            <div class="col-8">
+                                                {% if book.is_anthology == "0" %}
+                                                    <span class="fas fa-ban"></span>
+                                                {% elif book.is_anthology == "1" %}
+                                                    <span class="far fa-check-circle"></span>
+                                                {% else %}
+                                                    <p class="font-weight-light text-uppercase text-truncate">
+                                                        N/A</p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-4">
+                                                <p class="font-weight-light text-uppercase text-truncate">
+                                                    Colorized:</p>
+                                            </div>
+                                            <div class="col-8">
+                                                {% if book.colored == "not colored" %}
+                                                    <span class="fas fa-ban"></span>
+                                                {% elif book.colored == "colored" %}
+                                                    <span class="far fa-check-circle"></span>
+                                                {% else %}
+                                                    <p class="font-weight-light text-uppercase text-truncate">
+                                                        N/A</p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-4">
+                                                <p class="font-weight-light text-uppercase text-truncate">
+                                                    Decensored:</p>
+                                            </div>
+                                            <div class="col-8">
+                                                {% if book.decensored == "not decensored" %}
+                                                    <span class="fas fa-ban"></span>
+                                                {% elif book.decensored == "decensored" %}
+                                                    <span class="far fa-check-circle"></span>
+                                                {% else %}
+                                                    <p class="font-weight-light text-uppercase text-truncate">
+                                                        N/A</p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-4">
+                                                <p class="font-weight-light text-uppercase text-truncate">
+                                                    Digital:</p>
+                                            </div>
+                                            <div class="col-8">
+                                                {% if book.decensored == "not digital" %}
+                                                    <span class="fas fa-ban"></span>
+                                                {% elif book.decensored == "digital" %}
+                                                    <span class="far fa-check-circle"></span>
+                                                {% else %}
+                                                    <p class="font-weight-light text-uppercase text-truncate">
+                                                        N/A</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
+                            <div class="col-6" style="background-color: red">
+                                <div class="row">
+                                    <div class="col-4" style="background-color: purple">
+                                        <p class="font-weight-light text-uppercase text-truncate">Authors:</p>
+                                    </div>
+                                    <div class="col-8">
+                                        <ul style="display: inline;">
+                                            {% for author in book.concat_author_names %}
+                                                <li>{{ author }}</li>
+                                            {% empty %}
+                                                <p>No Pages.</p>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <div class="d-flex flex-wrap justify-content-around">
+                    {% for page in book.pages.all %}
+                        <div class="card-metadata" id="{{ page.id }}">
+
+                            <div class="card m-2 bg-light" style="width: 13rem;">
+                                <div class="card-hover-area">
+                                    <div class="card-img-frame" style="z-index: 0;">
+                                        <div class="text-center position-absolute" style="z-index: 1;">
+                                            <div class="spinner-border text-primary" role="status"
+                                                 style="visibility: hidden;">
+                                                <span class="sr-only">Loading...</span>
+                                            </div>
+                                        </div>
+                                        <a href="#"><img class="card-img-top" src="{{ page.page_thumb_lg.url }}"></a>
+                                    </div>
+                                    <div class="card-footer p-0">
+                                        <div class="row">
+                                            <div class="col text-left ">
+                                                <p class="card-title ml-2 mr-2 mt-1 mb-0 font-weight-light text-uppercase text-truncate">
+                                                    Page {{ page.page_number|default_if_none:"N/A" }}
+                                                </p>
+                                            </div>
+                                            <div class="col text-right">
+                                                <button type="button" class="btn btn-card btn-sm p-1"><span
+                                                        class="fas fa-ellipsis-v fa-s"></span></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p>No Pages.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
 
 {% block jquery %}
     <script>
+        // refresh and update page images on page load, ignore if not default thumbnail
         $(window).on('load', function () {
+            $(".card-metadata").each(function (index, value) {
+                var current_page_id = $(value).attr("id");
+                var current_page_spinner = $(value).find(".spinner-border");
+                var current_page_img = $(value).find("img");
+                var current_page_img_src = $(value).find("img").attr("src");
+                var current_img_filename = current_page_img_src.split("/").pop();
 
-            $("#spinner-border").show();
+                if (current_img_filename == 'book_default_thumb.jpg') {
+                    //current_page_spinner.css("visibility", "visible");
+                    $.ajax({
+                        type: "post",
+                        url: ".",
+                        data: {"clicked_page_id": current_page_id, "csrfmiddlewaretoken": "{{ csrf_token }}"},
+                        success: function (response) {
+                            var current_page_dict = {
+                                "page_id": response["page_id"],
+                                "page_img_src": response["page_img_src"]
+                            };
 
-            $.ajax({
-                url: '',
-                type: 'POST',
-                data: {
-                    'book_id': '{{ book.id }}',
-                    'csrfmiddlewaretoken': '{{ csrf_token }}'
-                },
-                success: function (data) {
-                    let cards = '';
-                    data.pages.forEach(page => {
-                        cards += '<div class="card m-2 bg-light" style="width: 12rem;"><div class="card-hover-area"><div class="card-img-frame"><a href="#"><img class="card-img-top" src="' + '/media/' + page.page_thumb_lg + '"></a></div><div class="card-footer p-0"><div class="row"><div class="col text-left "><p class="card-title ml-2 font-weight-normal text-uppercase text-truncate">Page ' + page.page_number + '</p></div><div class="col text-right"><button type="button" class="btn btn-card btn-sm p-1"><span class="fas fa-ellipsis-v fa-s"></span></button></div></div></div></div></div>'
+                            //current_page_img.fadeOut(100);
+                            current_page_img.attr("src", current_page_dict["page_img_src"]);
+                            //current_page_spinner.css("visibility", "hidden");
+                            //current_page_img.fadeIn(100);
+                        },
+                        error: function () {
+                            alert("Refresh failed.");
+                        }
                     });
-
-                    $('#pages-container').append(cards);
-
-                    $("#spinner-border").hide();
                 }
             });
         });

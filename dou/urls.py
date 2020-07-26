@@ -1,11 +1,7 @@
 from django.urls import path
-from django.conf.urls import url
-
-from .views import BooksView, BookView, refresh_book
+from .views import BooksView, BookView
 
 urlpatterns = [
-    path('books/', BooksView.as_view(template_name="dou/books.html")),
-    path('book/<int:pk>/', BookView.as_view(template_name="dou/book.html"), name='book'),
-    url(r'^refresh_book/$', refresh_book, name='refresh_book'),
-
+    path('books/', BooksView.as_view(), name='books'),
+    path('book/<int:pk>/', BookView.as_view(template_name="dou/test.html"), name='book'),
 ]

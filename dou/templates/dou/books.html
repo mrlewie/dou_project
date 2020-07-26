@@ -4,64 +4,126 @@
 {% block title %}<title>Books</title>{% endblock %}
 {% block stylesheet %}<link rel="stylesheet" href={% static 'css/dou-books.css' %}>{% endblock %}
 
-
 {% block content %}
     <div class="container-fluid">
-        <div class="d-flex flex-wrap">
-
-            {% for book in book_list %}
-                <div class="card m-2 bg-light" style="width: 12rem;">
-                    <div class="card-hover-area">
-                        <div class="card-header p-0 text-right">
-                            <div class="row">
-                                <div class="col-4"></div>
-                                <div class="col">
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-card btn-sm p-1"><span
-                                                class="fas fa-pencil-alt fa-s"></span></button>
-                                        <button type="button" class="btn btn-card btn-sm p-1"><span
-                                                class="fas fa-eye fa-s"></span></button>
-                                        <button type="button" class="btn btn-card btn-sm p-1"><span
-                                                class="fas fa-ellipsis-v fa-s"></span></button>
+        <div class="d-flex flex-wrap justify-content-around">
+             {% for book in book_list %}
+                <div class="card-metadata" id="{{ book.id }}">
+                    <div class="card m-2 bg-light" style="width: 13rem;">
+                        <div class="card-hover-area">
+                            <div class="card-header p-0 text-right">
+                                <div class="row">
+                                    <div class="col-4"></div>
+                                    <div class="col">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-card btn-sm p-1"><span
+                                                    class="fas fa-pencil-alt fa-s"></span></button>
+                                            <button type="button" class="btn btn-card btn-sm p-1"><span
+                                                    class="fas fa-eye fa-s"></span></button>
+                                            <div class="btn-refresh-cover-image">
+                                                <button type="button" class="btn btn-card btn-sm p-1"><span
+                                                        class="fas fa-ellipsis-v fa-s"></span></button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="card-img-frame">
-                            <a href="{% url 'book' book.id %}">
-                                <img class="card-img rounded-0" src={{ book.cover_thumb_lg.url }}>
-                            </a>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="row">
-                                <div class="col text-left">
-                                    <p class="card-text ml-2 mr-2 mt-1 mb-0 font-weight-light text-uppercase text-truncate">{{ book.web_id }}</p>
-                                </div>
-                                <div class="col text-right">
-                                    <p class="card-text ml-2 mr-2 mt-1 mb-0 font-weight-light text-uppercase text-truncate">{{ book.released }}</p>
-                                </div>
+                            <div class="card-img-frame">
+                                <a href="{% url 'book' book.id %}"><img class="card-img rounded-0" src="{{ book.cover_thumb_lg.url }}"></a>
                             </div>
-                            <p class="card-title ml-2 mr-2 mt-0 mb-0 font-weight-normal text-uppercase text-truncate">{{ book.name_en }}</p>
-                            <p class="card-subtitle ml-2 mr-2 mt-0 mb-0 font-weight-light text-uppercase text-truncate">{{ book.name_jp }}</p>
-                            <p class="card-text ml-2 mt-0 mr-2 mb-2 font-weight-light text-truncate">{{ book.concat_author_names_en }}</p>
+                            <div class="card-body p-0">
+                                <div class="row">
+                                    <div class="col text-left">
+                                        <p id="book-web-id"
+                                           class="card-text ml-2 mr-2 mt-1 mb-0 font-weight-light text-uppercase text-truncate">
+                                            {{ book.web_id|default_if_none:"N/A" }}
+                                        </p>
+                                    </div>
+                                    <div class="col text-right">
+                                        <p id="book-released"
+                                           class="card-text ml-2 mr-2 mt-1 mb-0 font-weight-light text-uppercase text-truncate">
+                                            {{ book.released|default_if_none:"N/A" }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <p id="book-name-en"
+                                   class="card-title ml-2 mr-2 mt-0 mb-0 font-weight-normal text-uppercase text-truncate">
+                                    {{ book.name_en|default_if_none:"N/A" }}
+                                </p>
+                                <p id="book-name-jp"
+                                   class="card-subtitle ml-2 mr-2 mt-0 mb-1 font-weight-light text-uppercase text-truncate">
+                                    {{ book.name_jp|default_if_none:"N/A" }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            {% empty %}
-                No Books.
-            {% endfor %}
 
+            {% empty %}
+                 <p>No Books.</p>
+            {% endfor %}
         </div>
     </div>
 {% endblock %}
 
 {% block jquery %}
     <script>
-        $(".book-refresh-btn").click(function () {
-            var b_id;
-            b_id = $(this).attr("data-b_id");
-            $.get('/dou/refresh_book/', {book_id: b_id}, function (data) {
+        // on refresh button click
+        $(".btn-refresh-cover-image").click(function () {
+            var clicked_card = $(this).closest(".card-metadata");           // get whole selected card
+            var clicked_book_id = clicked_card.attr("id");                  // get id of selected card
+
+            $.ajax({
+                type: "post",
+                url: ".",
+                data: {"clicked_book_id": clicked_book_id, "csrfmiddlewaretoken": "{{ csrf_token }}"},
+                success: function (response) {
+                    var clicked_card_dict = {
+                        "book_web_id": response["book_web_id"],
+                        "book_released": response["book_released"],
+                        "book_name_en": response["book_name_en"],
+                        "book_name_jp": response["book_name_jp"],
+                        "book_img_src": response["book_img_src"]
+                    };
+
+                    clicked_card_dict = clean_book_values(clicked_card_dict);
+
+                    clicked_card.find("#book-web-id").text(clicked_card_dict["book_web_id"]);
+                    clicked_card.find("#book-released").text(clicked_card_dict["book_released"]);
+                    clicked_card.find("#book-name-en").text(clicked_card_dict["book_name_en"]);
+                    clicked_card.find("#book-name-jp").text(clicked_card_dict["book_name_jp"]);
+                    clicked_card.find("img").attr("src", clicked_card_dict["book_img_src"]);
+                },
+                error: function () {
+                    alert("Refresh failed.");
+                }
             });
         });
+
+        // check dict value and if null set to n/a
+        function clean_book_values(card) {
+            if (card["book_web_id"] == null) {
+                card["book_web_id"] = "N/A"
+            }
+            ;
+            if (card["book_released"] == null) {
+                card["book_released"] = "N/A"
+            }
+            ;
+            if (card["book_name_en"] == null) {
+                card["book_name_en"] = "N/A"
+            }
+            ;
+            if (card["book_name_jp"] == null) {
+                card["book_name_jp"] = "N/A"
+            }
+            ;
+            if (card["book_name_jp"] == null) {
+                card["book_name_jp"] = "N/A"
+            }
+            ;
+            return card
+        };
+
     </script>
 {% endblock %}

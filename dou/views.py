@@ -1,14 +1,44 @@
-from django.views.generic import TemplateView, ListView, DetailView
-from django.http import JsonResponse
-from django.http import HttpResponse
+from django.views.generic import View, TemplateView, ListView, DetailView
+from django.http import HttpResponse, JsonResponse
+from django.core.cache import cache
+from django.shortcuts import render
 
-from .models import Book
+from .models import Book, Page
 
 
-class BooksView(ListView):
+# https://www.youtube.com/watch?v=F5mRW0jo-U4 for tutorial on much of this
+# https://stackoverflow.com/questions/5827590/css-styling-in-django-forms for example on forms
+class BooksView(View):
     template_name = 'dou/books.html'
-    context_object_name = 'book_list'
-    model = Book
+    queryset = Book.objects.all()
+
+    def get_queryset(self):
+        return self.queryset
+
+    def get(self, request, *args, **kwargs):
+        context = {'book_list': self.get_queryset()}
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        context = {}
+
+        if request.method == "POST":
+            clicked_book_id = request.POST['clicked_book_id']
+            book = Book.objects.get(id=clicked_book_id)
+
+            book.refresh_cover_image()
+            book.refresh_meta_via_filename()
+            book.refresh_meta_via_image()
+
+            context = {'book_id': book.id,
+                       'book_web_id': book.web_id,
+                       'book_released': book.released,
+                       'book_name_en': book.name_en,
+                       'book_name_jp': book.name_jp,
+                       'book_img_src': book.cover_thumb_lg.url
+                       }
+
+        return JsonResponse(context)
 
 
 class BookView(DetailView):
@@ -16,46 +46,29 @@ class BookView(DetailView):
     context_object_name = 'book'
     model = Book
 
-    # todo this needs a clean up
     def get_object(self):
-        print('GET CALLED')
         book = super().get_object()
+
+        if not book.pages.exists():
+            # call func to get grey placeholders quickly
+            book.get_page_placeholders()
+
+            # once done, use post in view to call book.refresh_page_images()
 
         return book
 
     def post(self, request, *args, **kwargs):
+        context = {}
 
-        if request.method == 'POST' and request.is_ajax():
-            book = super().get_object()
+        if request.method == "POST":
 
-            try:
-                if not book.pages.exists():
-                    book.refresh_page_images()
+            clicked_page_id = request.POST['clicked_page_id']
+            page = Page.objects.get(id=clicked_page_id)
 
-                pages = list(book.pages.all().values())
-                data = dict()
-                data['pages'] = pages
+            page.refresh_page_image()
 
-                return JsonResponse(data)
-                # return HttpResponse(pages)
+            context = {'page_id': page.id,
+                       'page_img_src': page.page_thumb_lg.url
+                       }
 
-            except KeyError:
-                return HttpResponse('Error')
-
-            return HttpResponse('done')
-
-
-def refresh_book(request):
-    b_id = None
-
-    if request.method == 'GET':
-        b_id = request.GET['book_id']
-
-    if b_id:
-        book = Book.objects.get(id=b_id)
-        book.refresh_cover_image()
-        book.refresh_meta_via_image()
-
-    refreshed = True
-
-    return HttpResponse(refreshed)
+        return JsonResponse(context)

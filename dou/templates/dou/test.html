@@ -1,0 +1,251 @@
+{% extends 'dou/base.html' %}
+
+{% load static %}
+{% block title %}<title>Book</title>{% endblock %}
+{% block stylesheet %}
+    <link rel="stylesheet" href={% static 'css/dou-book.css' %}>
+    <style>
+        body {
+            background-image: url({{ book.cover_thumb_lg.url }});
+        }
+
+        #header-section {
+            background-color: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+        }
+
+        <!--  -->
+        #header-container-title {
+        }
+
+        #header-slide-title {
+            height: 175px;
+            border-top-right-radius: 270px;
+            border-bottom-right-radius: 270px;
+            background-color: #007BFF;
+            box-shadow: 2px 2px 3px 0px rgba(0, 0, 0, 0.4);
+        }
+
+        #header-text-title {
+            font-size: 66px;
+        }
+
+        #header-text-subtitle {
+            font-size: 46px;
+        }
+
+        <!--  -->
+        #header-container-meta {
+        }
+
+        #header-slide-meta {
+            height: 250px;
+            border-top-left-radius: 270px;
+            border-bottom-left-radius: 270px;
+
+
+            background-color: #007BFF;
+            box-shadow: 2px 2px 3px 0px rgba(0, 0, 0, 0.4);
+        }
+
+        <!--  -->
+        #header-container-extra {
+        }
+
+        #header-slide-authors {
+            height: 75px;
+            border-top-right-radius: 270px;
+            border-bottom-right-radius: 270px;
+            background-color: #007BFF;
+            box-shadow: 2px 2px 3px 0px rgba(0, 0, 0, 0.4);
+        }
+
+        #header-slide-parodies {
+            height: 75px;
+            border-top-left-radius: 270px;
+            border-bottom-left-radius: 270px;
+            background-color: #007BFF;
+            box-shadow: 2px 2px 3px 0px rgba(0, 0, 0, 0.4);
+        }
+
+
+        #body-section {
+            height: auto;
+            background-color: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(40px);
+        }
+
+        #header-btn-edit {
+            height: 75px;
+            width: 75px;
+            border-radius: 90px;
+            box-shadow: 2px 2px 3px 0px rgba(0, 0, 0, 0.4);
+        }
+
+        #header-btn-scroll {
+            height: 75px;
+            width: 75px;
+            border-radius: 90px;
+            box-shadow: 2px 2px 3px 0px rgba(0, 0, 0, 0.4);
+        }
+
+        #content-header-meta-row {
+            height: 300px;
+            width: 90%;
+            background-color: red;
+        }
+
+        #content-body-row {
+            height: 300px;
+            background-color: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(20px);
+        }
+
+        #board-title-background {
+            background-color: #007BFF;
+            height: 175px;
+            width: 90vw;
+            transform: skew(-25deg);
+            position: relative;
+            left: -60px;
+            box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.25);
+        }
+
+        #board-meta-background {
+            background-color: #007BFF;
+            height: 175px;
+            width: 90vw;
+            transform: skew(25deg);
+            position: relative;
+            left: 60px;
+            float: right;
+            box-shadow: 3px 3px 5px 0px rgba(0, 0, 0, 0.25);
+        }
+
+        #board-title-text {
+            transform: skew(25deg);
+            position: absolute;
+            left: 50px;
+        }
+    </style>
+
+{% endblock %}
+
+{% block content %}
+    <div id="header-section" class="jumbotron-fluid">
+        <!--
+        <br>
+        <div id="header-container-title" class="container-fluid">
+            <div class="row">
+                <div class="col-11">
+                    <h1 id="header-text-title"
+                        class="text-light font-weight-normal text-uppercase text-truncate">{{ book.name_en|default_if_none:"N/A" }}</h1>
+                    <h1 id="header-text-subtitle"
+                        class="text-light font-weight-normal text-uppercase text-truncate">{{ book.name_jp|default_if_none:"N/A" }}</h1>
+                </div>
+                <div class="col-1 position-relative">
+                    <button type="button" class="btn btn-primary">Primary</button>
+                </div>
+            </div>
+        </div> -->
+        <br>
+        <div id="header-container-title" class="container-fluid">
+            <div class="row">
+                <div id="header-slide-title" class="col-11">
+                    <h1 id="header-text-title"
+                        class="text-light font-weight-normal text-uppercase text-truncate">{{ book.name_en|default_if_none:"N/A" }}
+                    </h1>
+                    <h3 id="header-text-subtitle"
+                        class="text-light font-weight-normal text-uppercase text-truncate">{{ book.name_jp|default_if_none:"N/A" }}
+                    </h3>
+                </div>
+                <div class="col-1"></div>
+            </div>
+        </div>
+        <br>
+        <div id="header-container-meta" class="container-fluid">
+            <div class="row">
+                <div class="col-1"></div>
+                <div id="header-slide-meta" class="col-11">
+
+                    <div class="row mt-3">
+                        <div class="col-1"></div>
+                        <div class="col-2">
+                            <div class="row">
+                                <h3 class="text-light font-weight-normal text-truncate">Released:</h3>
+                            </div>
+                            <div class="row">
+                                <h3 class="text-light font-weight-normal text-truncate">Original lang:</h3>
+                            </div>
+                            <div class="row">
+                                <h3 class="text-light font-weight-normal text-truncate">Translated lang:</h3>
+                            </div>
+                            <div class="row">
+                                <h3 class="text-light font-weight-normal text-truncate">Page count:</h3>
+                            </div>
+                        </div>
+
+                        <div class="col-2">
+                            <div class="row">
+                                <h3 id="meta-text-release"
+                                    class="text-light font-weight-normal text-truncate">{{ book.released|default_if_none:"N/A" }}
+                                </h3>
+                            </div>
+                            <div class="row">
+                                <h3 id="meta-text-orig-lang"
+                                    class="text-light font-weight-normal text-truncate">{{ book.language|default_if_none:"N/A" }}
+                                </h3>
+                            </div>
+                            <div class="row">
+                                <h3 id="meta-text-tran-lang"
+                                    class="text-light font-weight-normal text-truncate">{{ book.translation|default_if_none:"N/A" }}
+                                </h3>
+                            </div>
+                            <div class="row">
+                                <h3 id="meta-text-page-count"
+                                    class="text-light font-weight-normal text-truncate">{{ book.num_pages|default_if_none:"N/A" }}
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br>
+
+        <div id="header-container-extra" class="container-fluid">
+            <div class="row">
+                <div id="header-slide-authors" class="col-9">
+                    <p>heya</p>
+                </div>
+                <div class="col-1 text-center">
+                    <button id="header-btn-edit" type="button" class="btn btn-primary">
+                        <span class="fas fa-pencil-alt fa-2x"></span>
+                    </button>
+                </div>
+                <div class="col-1 text-center">
+                    <button id="header-btn-scroll" type="button" class="btn btn-primary">
+                        <span class="far fa-arrow-alt-circle-down fa-3x"></span>
+                    </button>
+                </div>
+                <div class="col-1 text-center">
+                    <button id="header-btn-scroll" type="button" class="btn btn-primary">
+                        <span class="fas fa-angle-double-down fa-3x"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <br>
+    </div>
+
+
+    <div id="body-section" class="container-fluid">
+        <p>This is some text.</p>
+    </div>
+
+
+{% endblock %}
+
+{% block jquery %}
+
+{% endblock %}

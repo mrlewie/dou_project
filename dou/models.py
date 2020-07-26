@@ -442,7 +442,7 @@ class Book(models.Model):
                                                                                filename=file, extension=ext)
                                     if created:
                                         content = ContentFile(img.read())
-                                        page.page_thumb_lg.save('pge' + '_' + 'lg', content) # todo move this up to above somehow
+                                        page.page_thumb_lg.save('pge' + '_' + 'lg', content)
 
                                         logging.info('FOUND: refreshed page image for id: {0}'.format(self.id))
 
@@ -460,53 +460,51 @@ class Book(models.Model):
 
         logging.info('FINISH: refreshing book cover image for id: {0}'.format(self.id))
 
-    def get_page_images(self):
+    def concat_author_names(self):
+        authors_raw = self.authors.all().values_list('name_en', 'name_jp', 'name_rj', flat=False)
+        authors_list = []
 
-        import base64
+        for author_tuple in authors_raw:
+            name_en = author_tuple[0]
+            name_jp = author_tuple[1]
+            name_rj = author_tuple[2]
 
-        #todo this needs clean up
-
-
-        logging.info('START: getting pages from zip for id: {0}'.format(self.id))
-
-        page_list = []
-
-        if self.filename and self.extension:
-            zip_path = os.path.join(FOLDER_PATH, self.filename + self.extension)
-
-            if os.path.isfile(zip_path):
-                with ZipFile(zip_path, 'r') as zip:
-                    filenames = sorted(zip.namelist())
-
-                    for filename in filenames:
-                        with zip.open(filename, mode='r') as img:
-
-                            try:
-                                p = r'C:\Users\Lewis\Desktop\book_default_thumb.jpg'
-                                data_uri = base64.b64encode(img.read()).decode('utf-8')
-                                img_tag = '{0}'.format(data_uri)
-                                page_list.append(img_tag)
-
-                            except Exception as e:
-                                logging.critical(e)
-
-                    logging.info('FOUND: refreshed book cover image for id: {0}'.format(self.id))
-
-                    return page_list
-
+            if name_en:
+                if name_jp:
+                    author_name = name_en + ' ' + '(' + name_jp + ')'
+                elif name_rj:
+                    author_name = name_en + ' ' + '(' + name_rj + ')'
+                else:
+                    author_name = name_en + ' ' + '(' + 'N/A' + ')'
             else:
-                logging.warning('WARN: zip path is not to a file: skipping')
+                author_name = None
 
+            authors_list.append(author_name)
+
+        return authors_list
+
+    def get_language_from_code(self):
+        if self.language == "2":
+            return "English"
+        elif self.language == "3":
+            return "Japanese"
+        elif self.language == "4":
+            return "Chinese"
+        elif self.language == "5":
+            return "Korean"
+        elif self.language == "6":
+            return "French"
+        elif self.language == "7":
+            return "German"
+        elif self.language == "8":
+            return "Spanish"
+        elif self.language == "9":
+            return "Italian"
+        elif self.language == "10":
+            return "Russian"
         else:
-            logging.warning('WARN: filename and extension not provided: skipping')
+            return None
 
-        logging.info('FINISH: refreshing book cover image for id: {0}'.format(self.id))
-
-    def concat_author_names_en(self):
-        list = self.authors.all().values_list('name_en', flat=True)
-        names = ' / '.join([i for i in list if i is not None])
-
-        return names
 
 @property
 def concat_parodies(self):
@@ -524,6 +522,41 @@ class Page(models.Model):
                                         processors=[Adjust(contrast=1.1, sharpness=1.1), SmartResize(245, 350)],
                                         null=True, blank=True, default=DEFAULT_BOOK_IMG_PATH)
     book = models.ForeignKey('Book', related_name='pages', on_delete=models.CASCADE)
+
+    def refresh_page_image(self):
+        logging.info('START: refreshing book page image for id: {0}'.format(self.id))
+
+        if self.book.filename and self.book.extension:
+            zip_path = os.path.join(FOLDER_PATH, self.book.filename + self.book.extension)
+
+            if os.path.isfile(zip_path):
+                with ZipFile(zip_path, 'r') as zip:
+                    filenames = sorted(zip.namelist())
+
+                    if filenames:
+                        for filename in filenames:
+                            if filename == self.filename + self.extension:
+
+                                with zip.open(filename, mode='r') as img:
+                                    try:
+                                        content = ContentFile(img.read())
+                                        self.page_thumb_lg.save('pge' + '_' + 'lg', content)
+
+                                        logging.info('FOUND: refreshed page image for id: {0}'.format(self.id))
+
+                                    except Exception as e:
+                                        logging.critical(e)
+
+                    else:
+                        logging.warning('WARN: folder detected in zip: skipping')
+
+            else:
+                logging.warning('WARN: zip path is not to a file: skipping')
+
+        else:
+            logging.warning('WARN: filename and extension not provided: skipping')
+
+        logging.info('FINISH: refreshing page image for id: {0}'.format(self.id))
 
 
 class SecondaryMetadata(models.Model):
@@ -665,21 +698,49 @@ class Content(SecondaryMetadata):
         constraints = [models.UniqueConstraint(fields=['web_id'], name='content_unq')]
 
 
-def refresh_filenames(folder_path):
-    logging.info('START: scanning for new zip files in folder: {0}'.format(folder_path))
+# scans folder for new zip files, adds filenames of each and associated pages to sqldb
+def refresh_book_and_page_filenames(folder_path):
+    logging.info('START: scanning for new book zip files in folder: {0}'.format(folder_path))
 
-    for file in os.listdir(folder_path):
-        filename, ext = os.path.splitext(file)
-        if ext == '.zip':
-            record, created = Book.objects.get_or_create(filename=filename, extension=ext)
-            if created:
-                logging.info('FOUND: new file found and added to db: {0}'.format(filename))
-        else:
-            logging.info('WARN: non-zip file encountered: {0} with {1}'.format(filename, ext))
+    for zip_file in os.listdir(folder_path):
+        zip_filename, zip_ext = os.path.splitext(zip_file)
 
-    logging.info('FINISH: scanning for new zip files in folder: {0}'.format(folder_path))
+        if zip_ext == '.zip':
+            book_record, book_created = Book.objects.get_or_create(filename=zip_filename, extension=zip_ext)
+
+            if book_created:
+                logging.info('FOUND: new book file found and added to db: {0}. Working on page files.'.format(zip_filename))
+
+                logging.info(os.path.join(folder_path, zip_file))
+
+                with ZipFile(os.path.join(folder_path, zip_file), 'r') as zip:
+                    page_files = sorted(zip.namelist())
+
+                    if page_files:
+                        i = 0
+                        for page_filename in page_files:
+                            i += 1
+                            page_filename, page_ext = os.path.splitext(page_filename)
+
+                            try:
+                                page_record, page_created = Page.objects.get_or_create(book=book_record, page_number=str(i),
+                                                                                       filename=page_filename, extension=page_ext)
+
+                            except Exception as e:
+                                logging.critical(e)
+
+                        logging.info('FINISH: refreshing pages filenames for id: {0}'.format(book_record.id))
+
+                    else:
+                        logging.warning('WARN: folder detected in zip: skipping')
+
+            else:
+                logging.warning('WARN: Book already exists: skipping')
+
+    logging.info('FINISH: refreshing book filenames for id: {0}'.format(book_record.id))
 
 
+# scans book db and removes any book records that have since been removed
 def clean_filenames(folder_path):
     logging.info('START: scanning db records with missing zip files in folder: {0}'.format(folder_path))
 
@@ -708,10 +769,20 @@ def clean_cover_images(folder_path):
 
     logging.info('FINISH: scanning cover image records with local files in folder: {0}'.format(folder_path))
 
-# from dou.models import *
-# refresh_filenames(FOLDER_PATH)
-# book = Book.objects.get(id=9435)
-# book.refresh_page_images()
-# clean_filenames(FOLDER_PATH)
-# clean_cover_images(SETTINGS_MEDIA_PATH)
-# test
+#from dou.models import *
+#import os
+#refresh_book_and_page_filenames(FOLDER_PATH)
+#books = Book.objects.all()
+#book = Book.objects.get(id=13185)
+
+#for book in books:
+    #book.refresh_meta_via_filename()
+    #book.refresh_meta_via_image()
+    #book.refresh_cover_image()
+    #book.refresh_cover_palette()
+    #book.get_page_images()
+
+#book.refresh_page_images()
+#clean_filenames(FOLDER_PATH)
+#clean_cover_images(SETTINGS_MEDIA_PATH)
+
