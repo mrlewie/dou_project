@@ -19,8 +19,6 @@ logging.basicConfig(format='%(message)s', level=logging.INFO)
 # globals
 DEFAULT_BOOK_IMG_PATH = r'placeholders/book_default_thumb.jpg'
 SETTINGS_MEDIA_PATH = settings.MEDIA_ROOT
-COVER_IMG_SM_PATH = r'covers/thumb_sm/'
-COVER_IMG_LG_PATH = r'covers/thumb_lg/'
 PAGE_IMG_LG_PATH = r'pages/'
 FOLDER_PATH = r'F:\Doujinshi_working'
 META_GENERAL = 'http://doujinshi.mugimugi.org/api'
@@ -41,9 +39,17 @@ class Book(models.Model):
     name_rj = models.CharField(max_length=150, null=True, blank=True)
     released = models.CharField(max_length=15, null=True, blank=True)
     num_pages = models.CharField(max_length=5, null=True, blank=True)
-    is_adult = models.CharField(max_length=5, null=True, blank=True)
-    is_anthology = models.CharField(max_length=5, null=True, blank=True)
-    language = models.CharField(max_length=50, null=True, blank=True)
+    lang_orig = models.CharField(max_length=50, null=True, blank=True)
+    lang_trans = models.CharField(max_length=50, null=True, blank=True)
+    user_rating = models.DecimalField(max_digits=2, decimal_places=1, null=True, blank=True)
+    is_adult = models.BooleanField(null=False, blank=False, default=True)
+    is_anthology = models.BooleanField(null=False, blank=False, default=False)
+    is_decensored = models.BooleanField(null=False, blank=False, default=False)
+    is_colored = models.BooleanField(null=False, blank=False, default=False)
+    is_digital = models.BooleanField(null=False, blank=False, default=False)
+    is_favorite = models.BooleanField(null=False, blank=False, default=False)
+    is_viewed = models.BooleanField(null=False, blank=False, default=False)
+    is_hidden = models.BooleanField(null=False, blank=False, default=False)
     conventions = models.ManyToManyField('Convention', blank=True)
     publishers = models.ManyToManyField('Publisher', blank=True)
     types = models.ManyToManyField('Type', blank=True)
@@ -51,24 +57,10 @@ class Book(models.Model):
     authors = models.ManyToManyField('Author', blank=True)
     parodies = models.ManyToManyField('Parody', blank=True)
     contents = models.ManyToManyField('Content', blank=True)
-    translation = models.CharField(max_length=50, null=True, blank=True)
-    decensored = models.CharField(max_length=15, null=True, blank=True)
-    colored = models.CharField(max_length=15, null=True, blank=True)
-    digital = models.CharField(max_length=15, null=True, blank=True)
     filename = models.TextField(unique=True, null=False, blank=False)
     extension = models.CharField(max_length=10, null=True, blank=True)
-    cover_thumb_sm = ProcessedImageField(upload_to=COVER_IMG_SM_PATH, options={'quality': 15}, format='JPEG',
-                                         processors=[Adjust(contrast=1.1, sharpness=1.1), SmartResize(35, 50)],
-                                         null=True, blank=True, default=DEFAULT_BOOK_IMG_PATH)
-    cover_thumb_lg = ProcessedImageField(upload_to=COVER_IMG_LG_PATH, options={'quality': 95}, format='JPEG',
-                                         processors=[Adjust(contrast=1.1, sharpness=1.1), SmartResize(350, 500)],
-                                         null=True, blank=True, default=DEFAULT_BOOK_IMG_PATH)
-    cover_palette = models.CharField(max_length=200, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     modified_on = models.DateTimeField(auto_now=True, null=True, blank=True)
-
-    def __str__(self):
-        return 'BOOK ID: {0} | BOOK NAME: {1}'.format(self.web_id, self.name_en)
 
     def parse_filename_to_dict(self):
 
@@ -198,7 +190,7 @@ class Book(models.Model):
                     self.num_pages = xml.find('DATA_PAGES').text
                     self.is_adult = xml.find('DATA_AGE').text
                     self.is_anthology = xml.find('DATA_ANTHOLOGY').text
-                    self.language = xml.find('DATA_LANGUAGE').text
+                    self.lang_orig = xml.find('DATA_LANGUAGE').text
                     self.save()
 
                     obj_dict = {'convention': Convention, 'publisher': Publisher, 'type': Type, 'circle': Circle,
@@ -218,10 +210,10 @@ class Book(models.Model):
                     if extra_tags:
                         logging.info('START: extra tags provided, adding to book metadata in db via dict')
 
-                        self.translation = extra_tags['translation']
-                        self.decensored = extra_tags['decensored']
-                        self.colored = extra_tags['colored']
-                        self.digital = extra_tags['digital']
+                        self.lang_trans = extra_tags['translation']
+                        self.is_decensored = extra_tags['decensored']
+                        self.is_colored = extra_tags['colored']
+                        self.is_digital = extra_tags['digital']
                         self.save()
 
                         logging.info('FOUND: extra tags added to boom metadata in db: {0}'.format(self.web_id))
@@ -356,7 +348,6 @@ class Book(models.Model):
                             try:
                                 content = ContentFile(img.read())
                                 self.cover_thumb_lg.save('cov' + '_' + 'lg', content)
-                                self.cover_thumb_sm.save('cov' + '_' + 'sm', content)
 
                                 logging.info('FOUND: refreshed book cover image for id: {0}'.format(self.id))
 
@@ -484,43 +475,43 @@ class Book(models.Model):
         return authors_list
 
     def get_language_from_code(self):
-        if self.language == "2":
+        if self.lang_orig == "2":
             return "English"
-        elif self.language == "3":
+        elif self.lang_orig == "3":
             return "Japanese"
-        elif self.language == "4":
+        elif self.lang_orig == "4":
             return "Chinese"
-        elif self.language == "5":
+        elif self.lang_orig == "5":
             return "Korean"
-        elif self.language == "6":
+        elif self.lang_orig == "6":
             return "French"
-        elif self.language == "7":
+        elif self.lang_orig == "7":
             return "German"
-        elif self.language == "8":
+        elif self.lang_orig == "8":
             return "Spanish"
-        elif self.language == "9":
+        elif self.lang_orig == "9":
             return "Italian"
-        elif self.language == "10":
+        elif self.lang_orig == "10":
             return "Russian"
         else:
             return None
 
 
-@property
-def concat_parodies(self):
-    list = self.parodies.all().values_list('name_en', flat=True)
-    parodies = ' / '.join([i for i in list if i is not None])
-
-    return parodies
-
-
 class Page(models.Model):
-    page_number = models.CharField(max_length=5, null=True, blank=True)
-    filename = models.TextField(null=True, blank=True)
+    page_num = models.IntegerField(null=False, blank=False)
+    width_orig = models.IntegerField(null=False, blank=False)
+    height_orig = models.IntegerField(null=False, blank=False)
+    orientation_orig = models.CharField(max_length=10, null=False, blank=False, default='portrait')
+    is_cover = models.BooleanField(null=False, blank=False, default=False)
+    is_viewed = models.BooleanField(null=False, blank=False, default=False)
+    is_hidden = models.BooleanField(null=False, blank=False, default=False)
+    filename = models.TextField(null=False, blank=False)
     extension = models.CharField(max_length=10, null=True, blank=True)
     page_thumb_lg = ProcessedImageField(upload_to=PAGE_IMG_LG_PATH, options={'quality': 95}, format='JPEG',
-                                        processors=[Adjust(contrast=1.1, sharpness=1.1), SmartResize(245, 350)],
+                                        processors=[Adjust(contrast=1.1, sharpness=1.1), SmartResize(420, 595)],
                                         null=True, blank=True, default=DEFAULT_BOOK_IMG_PATH)
+    created_on = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    modified_on = models.DateTimeField(auto_now=True, null=True, blank=True)
     book = models.ForeignKey('Book', related_name='pages', on_delete=models.CASCADE)
 
     def refresh_page_image(self):
@@ -540,6 +531,9 @@ class Page(models.Model):
                                 with zip.open(filename, mode='r') as img:
                                     try:
                                         content = ContentFile(img.read())
+
+                                        # todo get height and width
+
                                         self.page_thumb_lg.save('pge' + '_' + 'lg', content)
 
                                         logging.info('FOUND: refreshed page image for id: {0}'.format(self.id))
@@ -568,9 +562,6 @@ class SecondaryMetadata(models.Model):
 
     class Meta:
         abstract = True
-
-    def __str__(self):
-        return 'META ID: {0} | META NAME: {1}'.format(self.web_id, self.name_en)
 
     def update_via_xml(self, xml):
         logging.info('START: updating secondary metadata in db via xml')
@@ -698,47 +689,6 @@ class Content(SecondaryMetadata):
         constraints = [models.UniqueConstraint(fields=['web_id'], name='content_unq')]
 
 
-# scans folder for new zip files, adds filenames of each and associated pages to sqldb
-def refresh_book_and_page_filenames(folder_path):
-    logging.info('START: scanning for new book zip files in folder: {0}'.format(folder_path))
-
-    for zip_file in os.listdir(folder_path):
-        zip_filename, zip_ext = os.path.splitext(zip_file)
-
-        if zip_ext == '.zip':
-            book_record, book_created = Book.objects.get_or_create(filename=zip_filename, extension=zip_ext)
-
-            if book_created:
-                logging.info('FOUND: new book file found and added to db: {0}. Working on page files.'.format(zip_filename))
-
-                logging.info(os.path.join(folder_path, zip_file))
-
-                with ZipFile(os.path.join(folder_path, zip_file), 'r') as zip:
-                    page_files = sorted(zip.namelist())
-
-                    if page_files:
-                        i = 0
-                        for page_filename in page_files:
-                            i += 1
-                            page_filename, page_ext = os.path.splitext(page_filename)
-
-                            try:
-                                page_record, page_created = Page.objects.get_or_create(book=book_record, page_number=str(i),
-                                                                                       filename=page_filename, extension=page_ext)
-
-                            except Exception as e:
-                                logging.critical(e)
-
-                        logging.info('FINISH: refreshing pages filenames for id: {0}'.format(book_record.id))
-
-                    else:
-                        logging.warning('WARN: folder detected in zip: skipping')
-
-            else:
-                logging.warning('WARN: Book already exists: skipping')
-
-    logging.info('FINISH: refreshing book filenames for id: {0}'.format(book_record.id))
-
 
 # scans book db and removes any book records that have since been removed
 def clean_filenames(folder_path):
@@ -757,13 +707,12 @@ def clean_filenames(folder_path):
 def clean_cover_images(folder_path):
     logging.info('START: scanning cover image records with local files in folder: {0}'.format(folder_path))
 
-    db_filenames_sm = [os.path.basename(rec) for rec in Book.objects.values_list('cover_thumb_sm', flat=True) if rec]
     db_filenames_lg = [os.path.basename(rec) for rec in Book.objects.values_list('cover_thumb_lg', flat=True) if rec]
 
     for root, dirs, files in os.walk(folder_path):
         for file in files:
             if file != os.path.basename(DEFAULT_BOOK_IMG_PATH):
-                if file not in db_filenames_sm and file not in db_filenames_lg:
+                if file not in db_filenames_lg:
                     os.remove(os.path.join(root, file))
                     logging.info('FOUND: deleted cover file with no associated db record: {0}'.format(file))
 
