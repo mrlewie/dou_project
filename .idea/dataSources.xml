@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="DouDB" uuid="ddb43224-37de-4181-9578-ada78c2b555e">
+    <data-source source="LOCAL" name="DouDB" uuid="2a6777e0-d505-4bd5-9310-76ac996de604">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
