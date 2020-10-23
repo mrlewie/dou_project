@@ -2,10 +2,11 @@
 import logging
 import os
 import requests
+import math
 from django.db import models
 from dou_project import settings
 from django.core.files.base import ContentFile
-from lxml import html, etree
+from lxml import html
 from zipfile import ZipFile
 from imagekit import ImageSpec
 from imagekit.models import ProcessedImageField
@@ -15,10 +16,9 @@ from imagekit.processors import SmartResize, Adjust
 from dou.scripts import local_data, web_data
 
 # globals
-DEFAULT_BOOK_IMG_PATH = r'placeholders/book_default_thumb.jpg'
 SETTINGS_MEDIA_PATH = settings.MEDIA_ROOT
+DEFAULT_BOOK_IMG_PATH = r'placeholders/book_default_thumb.jpg'
 PAGE_IMG_LG_PATH = r'pages/'
-#FOLDER_PATH = r'F:\Doujinshi_working'
 FOLDER_PATH = r'D:\Doujinshi_working'
 META_SCRAPE = 'https://www.doujinshi.org/browse'
 
@@ -44,6 +44,18 @@ class GenChoices(models.IntegerChoices):
     YES = 1, 'Yes'
 
 
+# censorship choice list for official doujinshi.org values
+class DecensorChoices(models.IntegerChoices):
+    CEN = 0, 'Cen',
+    DECEN = 1, 'Decen'
+
+
+# adult content choice list for official doujinshi.org values
+class AdultChoices(models.IntegerChoices):
+    NON_ADULT = 0, 'NON-XXX',
+    ADULT = 1, 'XXX'
+
+
 # # # PRIMARY MODEL CLASSES
 class Book(models.Model):
     web_id = models.CharField(max_length=25, null=True, blank=True)
@@ -57,9 +69,9 @@ class Book(models.Model):
     lang_orig = models.IntegerField(choices=LangChoices.choices, null=True, blank=True, default=LangChoices.UNKNOWN)
     lang_user = models.IntegerField(choices=LangChoices.choices, null=True, blank=True, default=LangChoices.UNKNOWN)
     user_rating = models.DecimalField(max_digits=2, decimal_places=1, null=True, blank=True)
-    is_adult = models.BooleanField(choices=GenChoices.choices, null=False, blank=False, default=GenChoices.YES)
+    is_adult = models.BooleanField(choices=AdultChoices.choices, null=False, blank=False, default=AdultChoices.ADULT)
     is_anthology = models.BooleanField(choices=GenChoices.choices, null=False, blank=False, default=GenChoices.NO)
-    is_decensored = models.BooleanField(choices=GenChoices.choices, null=False, blank=False, default=GenChoices.NO)
+    is_decensored = models.BooleanField(choices=DecensorChoices.choices, null=False, blank=False, default=DecensorChoices.CEN)
     is_colored = models.BooleanField(choices=GenChoices.choices, null=False, blank=False, default=GenChoices.NO)
     is_digital = models.BooleanField(choices=GenChoices.choices, null=False, blank=False, default=GenChoices.NO)
     is_favorite = models.BooleanField(choices=GenChoices.choices, null=False, blank=False, default=GenChoices.NO)
@@ -78,50 +90,62 @@ class Book(models.Model):
 
     # # # PRIMARY FUNCTIONS
     # takes a web_id, filename or cover image from a book record, queries web, updates meta if new version
-    def refresh_book_meta(self, refresh_type='cover_image', manual_web_id=None, min_accuracy=0.7):
+    def refresh_metadata(self, refresh_type='cover_image', manual_web_id=None, min_accuracy=0.75):
         """
         :param refresh_type: sets the refresh method. value of 'web_id', 'filename' or 'cover_image' allowed.
         :param manual_web_id: user-set web_id to manually override auto-detected web_id.
         :param min_accuracy: sets the minimum allowed match accuracy for filename and cover_image match methods.
         """
 
-        # todo logs
-        # todo else statements and error handles
+        # todo clean code, add prints, do error handles better
         xml = None
 
-        if refresh_type in ['web_id', 'filename', 'cover_image']:
-            if self.foldername:
-                cover_image_path = self.fetch_cover_image_path()
-                file_tags_dict = local_data.convert_filename_to_meta_dict(filename=self.foldername)
+        if self.foldername and refresh_type in ['web_id', 'filename', 'cover_image']:
+            file_tags_dict = local_data.convert_foldername_to_meta_dict(foldername=self.foldername)
 
-                if refresh_type == 'web_id' or manual_web_id:
-                    web_id = manual_web_id if manual_web_id else self.web_id
-                    if web_id:
-                        xml = web_data.fetch_meta_xml_via_web_id(web_id=web_id)
+            if refresh_type == 'web_id' or manual_web_id:
+                web_id = manual_web_id if manual_web_id else self.web_id
+                if web_id:
+                    xml = web_data.fetch_meta_xml_via_web_id(web_id=web_id)
 
-                elif refresh_type == 'filename' and self.foldername:
-                    xmls = web_data.fetch_meta_xml_via_filename(filename=self.foldername)
-                    if xmls is not None:
-                        xml = web_data.select_most_similar_xml_book(xmls,
-                                                                    known_title=file_tags_dict['title'],
-                                                                    min_accuracy=min_accuracy)
+            elif refresh_type == 'filename':
+                xmls = web_data.fetch_meta_xml_via_foldername(foldername=self.foldername)
+                if xmls is not None:
+                    xml = web_data.select_most_similar_xml_book(xmls,
+                                                                known_title=file_tags_dict['title'],
+                                                                min_accuracy=min_accuracy)
 
-                elif refresh_type == 'cover_image' and cover_image_path:
-                    xmls = web_data.fetch_meta_xml_via_cover_image(cover_img_path=cover_image_path)
-                    if xmls is not None:
-                        xml = web_data.select_most_similar_xml_book(xmls,
-                                                                    known_title=file_tags_dict['title'],
-                                                                    min_accuracy=min_accuracy)
+            elif refresh_type == 'cover_image' and self.fetch_cover_image().path:
+                xmls = web_data.fetch_meta_xml_via_cover_image(cover_img_path=self.fetch_cover_image().path)
+                if xmls is not None:
+                    xml = web_data.select_most_similar_xml_book(xmls,
+                                                                known_title=file_tags_dict['title'],
+                                                                min_accuracy=min_accuracy)
 
-                if xml is not None:
-                    meta_dict = web_data.convert_meta_xml_to_dict(xml=xml)
-                    if self.version < meta_dict['version']:
-                        self.update_book_via_meta_dict(meta_dict=meta_dict,
-                                                       file_tags_dict=file_tags_dict)
-                    else:
-                        print('Same version detected. Not updating.')
+            if xml is not None:
+                meta_dict = web_data.convert_meta_xml_to_dict(xml=xml)
+                if self.version < meta_dict['version']:
+                    self.update_book_via_meta_dict(meta_dict=meta_dict,
+                                                   file_tags_dict=file_tags_dict)
+                else:
+                    print('WARN: Same version detected. Not updating.')
 
-    # # # SECONDARY FUNCTIONS
+    # takes current book, scans pages in related folder, syncs page info and folder files
+    def refresh_page_info(self):
+        """
+        :return:
+        """
+        # todo here we can do post scan clean up
+        local_data.scan_book_pages_in_folders(self)
+
+    # takes current book, scans page images in related folder, syncs page images and folder files
+    def refresh_page_images(self):
+        """
+        :return:
+        """
+        # todo here we can do post scan clean up
+        local_data.scan_page_images_in_folders(self)
+
     # update and save a book record using a meta dictionary
     def update_book_via_meta_dict(self, meta_dict, file_tags_dict):
         # todo log
@@ -143,17 +167,16 @@ class Book(models.Model):
 
         if file_tags_dict:
             try:
-                #self.num_pages_user = file_tags_dict['num_pages_user']  # todo check this populates earlier
+                # self.num_pages_user = file_tags_dict['num_pages_user']  # todo check this populates earlier
                 self.lang_user = file_tags_dict['lang_user']
                 self.is_decensored = file_tags_dict['is_decensored']
                 self.is_colored = file_tags_dict['is_colored']
                 self.is_digital = file_tags_dict['is_digital']
                 self.save()
-            except:
-                print('error')
+            except Exception as e:
+                print(e)
 
-        # todo secondary meta loops
-
+            # todo secondary meta loops
 
             """
               msg = 'None' if self.version is None else 'older than xml'
@@ -205,37 +228,49 @@ class Book(models.Model):
 
                 """
 
-    # fetch the underlying cover image path and filename
-    def fetch_cover_image_path(self):
-        cover_exists = self.pages.filter(is_cover=True)
+    # # # SECONDARY FUNCTIONS
+    # fetch the all associated pages for current book
+    def fetch_all_pages(self):
+        pages = self.pages.all()
 
-        if cover_exists:
-            cover_page = self.pages.get(is_cover=True)
-            cover_path = cover_page.page_thumb_lg.file.name
-            return cover_path
+        if pages:
+            return pages
         else:
             return None
 
+    # fetch the underlying cover image url for current book
+    def fetch_cover_image(self):
+        cover_exists = self.pages.filter(is_cover=True)
 
-# thumbnail portrait image processor
-class ThumbnailPortrait(ImageSpec):
-    processors = [Adjust(contrast=1.1, sharpness=1.1), SmartResize(420, 595)]
-    format = 'JPEG'
-    options = {'quality': 90}
+        if cover_exists:
+            cover_url = self.pages.get(is_cover=True)
+            cover_url = cover_url.page_thumb_lg
+            return cover_url
+        else:
+            return None
+
+    # calculate number of hidden dummy pages from number of pages
+    def calc_num_of_dummy_pages(self):
+        num_user_pages = self.pages.count()  # todo make it so pages counted is done during scan
+        num_pages_per_row = 7  # todo fetch this from a settings table
+
+        if num_user_pages > 0 and num_pages_per_row > 0:
+            num_all_rows = math.ceil(num_user_pages / num_pages_per_row)
+            num_dummies = (num_pages_per_row * num_all_rows) - num_user_pages
+            num_dummies = list(range(0, num_dummies))
+            return num_dummies
+        else:
+            num_dummies = []
+            return num_dummies
 
 
-# thumbnail landscape image processor
-class ThumbnailLandscape(ImageSpec):
-    processors = [Adjust(contrast=1.1, sharpness=1.1), SmartResize(595, 420)]
-    format = 'JPEG'
-    options = {'quality': 90}
-
-
-# thumbnail square image processor
-class ThumbnailSquare(ImageSpec):
-    processors = [Adjust(contrast=1.1, sharpness=1.1), SmartResize(595, 595)]
-    format = 'JPEG'
-    options = {'quality': 90}
+# thumbnail image processor
+class Thumbnail(ImageSpec):
+    def __init__(self, source, width=420, height=595):
+        self.source = source
+        self.processors = [Adjust(contrast=1.1, sharpness=1.1), SmartResize(width, height)]
+        self.format = 'JPEG'
+        self.options = {'quality': 90}
 
 
 class Page(models.Model):
@@ -443,20 +478,19 @@ def clean_cover_images(folder_path):
 
     logging.info('FINISH: scanning cover image records with local files in folder: {0}'.format(folder_path))
 
-#from dou.models import *
-#import os
-#refresh_book_and_page_filenames(FOLDER_PATH)
-#books = Book.objects.all()
-#book = Book.objects.get(id=13185)
+# from dou.models import *
+# import os
+# refresh_book_and_page_filenames(FOLDER_PATH)
+# books = Book.objects.all()
+# book = Book.objects.get(id=13185)
 
-#for book in books:
-    #book.refresh_meta_via_filename()
-    #book.refresh_meta_via_image()
-    #book.refresh_cover_image()
-    #book.refresh_cover_palette()
-    #book.get_page_images()
+# for book in books:
+# book.refresh_meta_via_filename()
+# book.refresh_meta_via_image()
+# book.refresh_cover_image()
+# book.refresh_cover_palette()
+# book.get_page_images()
 
-#book.refresh_page_images()
-#clean_filenames(FOLDER_PATH)
-#clean_cover_images(SETTINGS_MEDIA_PATH)
-
+# book.refresh_page_images()
+# clean_filenames(FOLDER_PATH)
+# clean_cover_images(SETTINGS_MEDIA_PATH)
